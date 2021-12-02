@@ -7,7 +7,7 @@ let input = fs.readFileSync("./day1input")
 
 const windows = [];
 for (let i = 0; i < input.length - 2; i++) {
-  windows.push(_.sum([input[i], input[i+1], input[i+2]]))
+  windows.push(_.sum(input.slice(i, i + 3)));
 }
 
 let prev = windows[0];
