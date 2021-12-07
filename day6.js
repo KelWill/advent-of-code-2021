@@ -8,5 +8,5 @@ for (const day of _.range(0, 256)) {
   f.push(f.shift());
   f[6] += f[8];
 }
-console.log(Object.values(f).reduce((sum, n) => sum + n), 0)
+console.log(f.reduce((sum, n) => sum + n), 0)
 
