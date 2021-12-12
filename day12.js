@@ -1,43 +1,53 @@
 
-
 function p1 (input) {
   const nodes = input.split("\n").reduce((acc, row) => {
     const [start, end] = row.split("-")
-    acc[start] = acc[start] || {children: [], k: start};
-    acc[end] = acc[end] || {children: [], k: end};
-    acc[start].children.push(end);
-    acc[end].children.push(start);
+    acc[start] = acc[start] || []
+    acc[end] = acc[end] || [];
+    acc[start].push(end);
+    acc[end].push(start);
     return acc;
   }, {});
 
-  let paths = [["start"]];
+  let paths = [["start", {}, false]];
   let completedCount = 0;
 
-  while (paths.length) {
-    paths = paths.flatMap((path) => {
-      const currentKey = path[path.length - 1];
-      const currentNode = nodes[currentKey];
-  
-      return currentNode.children.map((k) => {
-        if (k === "start") return;
-        if (k === "end") {
-          completedCount++;
-          return;
+  let curr;
+  while (curr = paths.pop()) {
+
+    const [ currentKey, visitedLowers, hasDoubledVisitedLower ] = curr;
+    const currentNode = nodes[currentKey];
+    for (const k of currentNode) {
+      if (k === "start") continue;
+      if (k === "end") {
+        completedCount++;
+        continue;
+      }
+
+      if (k === k.toLowerCase()) {
+        if (!visitedLowers[k]) {
+          paths.push([
+            k,
+            { ...visitedLowers, [k]: true },
+            hasDoubledVisitedLower,
+          ]);
+          continue;
         }
 
-        if (k === k.toLowerCase() && path.includes(k)) {
-          if (path.lowerVisit) return;
-          const updatedPath = path.concat(k);
-          updatedPath.lowerVisit = k;
-          return updatedPath;
-        } 
+        if (hasDoubledVisitedLower) continue;
+        paths.push([
+          k, visitedLowers, k
+        ])
+        continue;
+      }
 
-        const updatedPath = path.concat(k);
-        updatedPath.lowerVisit = path.lowerVisit;
+      paths.push([
+        k,
+        visitedLowers,
+        hasDoubledVisitedLower,
+      ]);
+    }
 
-        return updatedPath;
-      }).filter(Boolean);      
-    });
   }
 
   return completedCount;
