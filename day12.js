@@ -10,7 +10,6 @@ function p1 (input) {
 
     const aIndex = map[a] = map[a] != null ? map[a] : i++;
     const bIndex = map[b] = map[b] != null ? map[b] : i++;
-
   
     if (a === a.toLowerCase()) {
       lowercaseIndexes[aIndex] = 1;
@@ -32,7 +31,7 @@ function p1 (input) {
 
   const startIndex = map.start;
   const endIndex = map.end;
-  const paths = [[startIndex, [], false]];
+  const paths = [[startIndex, 0, false]];
 
   let curr;
   while (curr = paths.pop()) {
@@ -53,13 +52,12 @@ function p1 (input) {
         continue;
       }
 
-      if (!seen[k]) {
-        const n = seen.slice();
-        n[k] = true;
+      const mask = 1 << k;
 
+      if (!(seen & mask)) {
         paths.push([
           k,
-          n,
+          seen | mask,
           doubleVisited,
         ]);
         continue;
