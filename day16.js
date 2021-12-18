@@ -10,6 +10,8 @@ function toBits (s) {
 
 
 
+
+
 class Packet {
   constructor (bits) {
     let i = 0;
@@ -32,6 +34,8 @@ class Packet {
     }
 
     this.subPackets = [];
+
+
 
     if (bits[i++] === "0") {
       const subPacketBitLength = parseInt(bits.slice(i, i + 15), 2);
