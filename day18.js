@@ -1,228 +1,132 @@
+const assert = require("assert");
+const _ = require("lodash");
+const realInput = require("fs").readFileSync("./day18input").toString();
+const testInput = `[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
+[[[5,[2,8]],4],[5,[[9,9],0]]]
+[6,[[[6,2],[5,6]],[[7,6],[4,7]]]]
+[[[6,[0,7]],[0,9]],[4,[9,[9,0]]]]
+[[[7,[6,4]],[3,[1,3]]],[[[5,5],1],9]]
+[[6,[[7,3],[3,2]]],[[[3,8],[5,7]],4]]
+[[[[5,4],[7,7]],8],[[8,3],8]]
+[[9,3],[[9,9],[6,[4,9]]]]
+[[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
+[[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]`;
 
-function explode (a, indexesByDepth, i) {
-  const l = a[i];
-  const r = a[i + 1];
-  if (a[i - 1] != null) a[i - 1] += l;
-  if (a[i + 2] != null) a[i + 2] += r;
-  a.splice(i, 2, 0);
 
-  for (let depth = 0; depth < indexesByDepth.length; depth++) {
-    indexesByDepth[depth] = indexesByDepth[depth].map((ni) => {
-      if (ni === i || ni === i + 1) return null;
+function explode (array, i) {
+  const [l, d] = array[i];
+  const [r, d2] = array[i + 1];
+  assert.equal(d, d2);
 
-      if (ni > i) return ni--;
-      else return ni;
-    }).filter((n) => n != null);
+  if (array[i - 1] != null) array[i - 1][0] += l;
+  if (array[i + 2] != null) array[i + 2][0] += r;
+  array.splice(i, 2, [0, d - 1]);
+
+  return array;
+
+}
+
+function split (array, i) {
+  const [v, d] = array[i];
+  array.splice(i, 1, [ Math.floor(v / 2), d + 1], [Math.ceil(v / 2), d + 1]);
+}
+
+function add (a, b) {
+  const updated = a.concat(b);
+  updated.forEach((entry) => entry[1]++);
+  return updated;
+}
+
+function reduce (array) {
+  for (let i = 0; i < array.length - 1; i++) {
+    const d = array[i][1];
+    const d2 = array[i + 1][1];
+    if (d > 4 && d === d2) {
+      explode(array, i);
+      return reduce(array);
+    }
   }
 
-  indexesByDepth[4].push(i);
-
-  return {
-    array: a,
-    indexesByDepth,
+  for (let i = 0; i < array.length; i++) {
+    if (array[i][0] >= 10) {
+      split(array, i);
+      return reduce(array);
+    }
   }
+
+  return array;
+}
+
+function parse (s) {
+  const nestedArrays = JSON.parse(s);
+  return bfs(nestedArrays);
 }
 
 
 function bfs (pairs) {
   let a = [];
-  const indexesByDepth = new Array(5).fill(0).map(() => []);
-  let l = [{c: pairs, d: 0}];
+  let l = [{ c: pairs, d: 0 }];
   let curr;
   while (curr = l.pop()) {
     const { c, d } = curr;
     if (!Array.isArray(c)) {
-      a.push(c);
-      indexesByDepth[d] = indexesByDepth[d] || [];
-      indexesByDepth[d].push(a.length - 1);
+      a.push([c, d]);
     } else {
-      l.push({c: c[1], d: d + 1});
-      l.push({c: c[0], d: d + 1});
+      l.push({ c: c[1], d: d + 1 });
+      l.push({ c: c[0], d: d + 1 });
     }
   }
 
-  return {
-    array: a,
-    indexesByDepth,
+  return a;
+}
+
+function calculateMagnitude (array) {
+  if (array.length === 1) return array[0][0];
+
+  let updated = [];
+  for (let i = 0; i < array.length - 1; i++) {
+    if (array[i][1] === array[i + 1][1]) {
+      const d = array[i][1] - 1;
+      updated.push([array[i][0] * 3 + array[i + 1][0] * 2 , d]);
+      i++;
+    } else {
+      updated.push(array[i]);
+    }
   }
+
+  return calculateMagnitude(updated);
 }
+
 {
-  const { indexesByDepth, array } = bfs([[[[[9,8],1],2],3],4])
-  console.log(array, indexesByDepth);
-  console.log(explode(array, indexesByDepth, 0));
+  // part 1
+  const input = realInput;
+  const rows = input.split("\n")
+    .map(parse);
+
+  let curr = rows.shift();
+  curr = reduce(curr);
+  for (let row of rows) {
+    curr = reduce(add(reduce(curr), reduce(row)));
+  }
+  console.log(calculateMagnitude(curr));
+}
+
+{
+  // part 2
+  const input = realInput;
+  const rows = input.split("\n");
+
+  const c = (a, b) => calculateMagnitude(reduce(add(a, b)));
+  let maxMagnitude = -Infinity;
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = 0; j < rows.length; j++) {
+      if (i === j) continue;
+      const a = parse(rows[i]);
+      const b = parse(rows[j]);
+      maxMagnitude = Math.max(c(a, b), c(b, a), maxMagnitude);
+    }
+  }
+  console.log(maxMagnitude);
 }
 
 
-
-
-
-
-// function add (node1, node2) {
-
-//   const n = new Node([], -1);
-
-//   n.children = [node1, node2];
-//   n.children.forEach((c) => c.parent = n);
-//   n.children[0].right = n.children[1];
-//   n.children[1].left = n.children[0];
-
-//   n.incrementDepths();
-//   nodesByDepth.unshift(n);
-//   return n;
-// }
-
-
-
-// class Node {
-//   constructor (pairs, depth = 0) {
-
-//     this.depth = depth;
-
-//     nodesByDepth[depth] = nodesByDepth[depth] ?? [];
-//     nodesByDepth[depth].push(this);
-
-//     if (!Array.isArray(pairs)) {
-//       this.value = pairs;
-//       return this;
-//     }
-
-//     this.setUpChildren(pairs);
-//   }
-
-//   incrementDepths () {
-//     this.depth++;
-//     this.children.forEach((c) => c.incrementDepths());
-//   }
-  
-//   setUpChildren (pairs) {
-//     if (!pairs.length) return;
-
-//     const depth = this.depth;
-//     this.children = pairs.map((c) => new Node(c, depth + 1));
-//     this.children[0].parent = this;
-//     this.children[1].parent = this;
-  
-//     this.children[1].left = this.children[0];
-//     this.children[0].right = this.children[1];
-//   }
-
-//   split () {
-//     if (!this.value || this.value < 10) return;
-//     const pair = [Math.floor(this.value / 2), Math.ceil(this.value / 2)];
-//     delete this.value;
-//     this.setUpChildren(pair);
-//     return true;
-//   }
-
-//   explode () {
-//     if (this.depth >= 4 && this.children) {
-//       const l = this.children[0].value;
-//       const r = this.children[1].value;
-//       delete this.children;
-//       this.value = 0;
-
-//       let visited = new Set();
-//       let curr = this;
-//       while (true) {
-//         if (visited.has(curr)) break;
-//         visited.add(curr);
-//         if (curr.value != null) {
-//           curr.value += l;
-//           return true;
-//         }
-
-//         if (curr.left && !visited.has(curr.left)) curr = curr.left;
-//         else if (curr.children && !visited.has(curr.children[0])) curr = curr.children[0];
-//         else if (curr.parent && !visited.has(curr.parent)) curr = curr.parent;
-//       }
-
-//       curr = this;
-//       visited = new Set();
-//       while (true) {
-//         if (visited.has(curr)) break;
-//         visited.add(curr);
-//         if (curr.value != null) {
-//           curr.value += l;
-//           return true;
-//         }
-
-//         if (curr.right && !visited.has(curr.right)) curr = curr.right;
-//         else if (curr.children && !visited.has(curr.children[0])) curr = curr.children[0];
-//         else if (curr.parent && !visited.has(curr.parent)) curr = curr.parent;
-//       }
-
-//       return false;
-//     }
-//   }
-
-//   reduce () {
-//     let changed = false;
-//     let bfsList = [this];
-//     let curr;
-
-//     console.log(this.toString());
-
-//     while (curr = bfsList.pop()) {
-//       if (curr.explode()) {
-//         changed = true;
-//         break;
-//       }
-//       if (curr.children) {
-//         bfsList.push(curr.children[1]);
-//         bfsList.push(curr.children[0]);
-//       }
-//     }
-
-//     if (changed) {
-//       return this.reduce();
-//     }
-
-//     bfsList = [this];
-//     while (curr = bfsList.pop()) {
-//       if (curr.split()) {
-//         changed = true;
-//         break;
-//       }
-//       if (curr.children) {
-//         bfsList.push(curr.children[1]);
-//         bfsList.push(curr.children[0]);
-//       }
-//     }
-
-//     if (changed) {
-//       return this.reduce();
-//     }
-//   }
-
-//   toString () {
-//     if (this.value != null) return this.value.toString();
-//     else return `[${this.children[0].toString()}, ${this.children[1].toString()}]`
-//   }
-
-// }
-
-
-// [
-//   [7,[6,[5,[4,[3,2]]]]],
-//   [[[[[9,8],1],2],3],4],
-//   [[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]],
-// ].forEach((ex) => {
-//   const n = new Node(ex);
-//   n.reduce();
-//   console.log(n.toString());
-// });
-
-
-
-// function add (a, b) {
-//   return [a, b];
-// }
-
-
-// function explode (pairs) {
-//   const depths = calculateDepths(pairs);
-
-//   if (depths.length < 4) return depths;
-// }
-
-// function split (pairs) {}
